@@ -1,0 +1,9 @@
+Revision history for Perl extension Sane.
+
+0.02  Sat Nov 22 21:53:45 2008
+        - renamed to Graphics::SANE
+
+0.01  Sat Jan 13 10:00:13 2007
+	- original version; created by h2xs 1.23 with options
+		-n Sane sane.h
+
