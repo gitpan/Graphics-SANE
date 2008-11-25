@@ -55,32 +55,20 @@ __END__
   switch (len) {
   case 15:
     if (memEQ(name, "SANE_STATUS_EOF", 15)) {
-#ifdef SANE_STATUS_EOF
       *iv_return = SANE_STATUS_EOF;
       return PERL_constant_ISIV;
-#else
-      return PERL_constant_NOTDEF;
-#endif
     }
     break;
   case 16:
     if (memEQ(name, "SANE_STATUS_GOOD", 16)) {
-#ifdef SANE_STATUS_GOOD
       *iv_return = SANE_STATUS_GOOD;
       return PERL_constant_ISIV;
-#else
-      return PERL_constant_NOTDEF;
-#endif
     }
     break;
   case 17:
     if (memEQ(name, "SANE_STATUS_INVAL", 17)) {
-#ifdef SANE_STATUS_INVAL
       *iv_return = SANE_STATUS_INVAL;
       return PERL_constant_ISIV;
-#else
-      return PERL_constant_NOTDEF;
-#endif
     }
     break;
   case 18:
@@ -91,65 +79,41 @@ __END__
     case 'J':
       if (memEQ(name, "SANE_STATUS_JAMMED", 18)) {
       /*                           ^            */
-#ifdef SANE_STATUS_JAMMED
         *iv_return = SANE_STATUS_JAMMED;
         return PERL_constant_ISIV;
-#else
-        return PERL_constant_NOTDEF;
-#endif
       }
       break;
     case 'N':
       if (memEQ(name, "SANE_STATUS_NO_MEM", 18)) {
       /*                           ^            */
-#ifdef SANE_STATUS_NO_MEM
         *iv_return = SANE_STATUS_NO_MEM;
         return PERL_constant_ISIV;
-#else
-        return PERL_constant_NOTDEF;
-#endif
       }
       break;
     }
     break;
   case 19:
     if (memEQ(name, "SANE_STATUS_NO_DOCS", 19)) {
-#ifdef SANE_STATUS_NO_DOCS
       *iv_return = SANE_STATUS_NO_DOCS;
       return PERL_constant_ISIV;
-#else
-      return PERL_constant_NOTDEF;
-#endif
     }
     break;
   case 20:
     if (memEQ(name, "SANE_STATUS_IO_ERROR", 20)) {
-#ifdef SANE_STATUS_IO_ERROR
       *iv_return = SANE_STATUS_IO_ERROR;
       return PERL_constant_ISIV;
-#else
-      return PERL_constant_NOTDEF;
-#endif
     }
     break;
   case 21:
     if (memEQ(name, "SANE_STATUS_CANCELLED", 21)) {
-#ifdef SANE_STATUS_CANCELLED
       *iv_return = SANE_STATUS_CANCELLED;
       return PERL_constant_ISIV;
-#else
-      return PERL_constant_NOTDEF;
-#endif
     }
     break;
   case 22:
     if (memEQ(name, "SANE_STATUS_COVER_OPEN", 22)) {
-#ifdef SANE_STATUS_COVER_OPEN
       *iv_return = SANE_STATUS_COVER_OPEN;
       return PERL_constant_ISIV;
-#else
-      return PERL_constant_NOTDEF;
-#endif
     }
     break;
   case 23:
@@ -160,35 +124,23 @@ __END__
     case 'T':
       if (memEQ(name, "SANE_STATUS_UNSUPPORTED", 23)) {
       /*                                   ^         */
-#ifdef SANE_STATUS_UNSUPPORTED
         *iv_return = SANE_STATUS_UNSUPPORTED;
         return PERL_constant_ISIV;
-#else
-        return PERL_constant_NOTDEF;
-#endif
       }
       break;
     case 'U':
       if (memEQ(name, "SANE_STATUS_DEVICE_BUSY", 23)) {
       /*                                   ^         */
-#ifdef SANE_STATUS_DEVICE_BUSY
         *iv_return = SANE_STATUS_DEVICE_BUSY;
         return PERL_constant_ISIV;
-#else
-        return PERL_constant_NOTDEF;
-#endif
       }
       break;
     }
     break;
   case 25:
     if (memEQ(name, "SANE_STATUS_ACCESS_DENIED", 25)) {
-#ifdef SANE_STATUS_ACCESS_DENIED
       *iv_return = SANE_STATUS_ACCESS_DENIED;
       return PERL_constant_ISIV;
-#else
-      return PERL_constant_NOTDEF;
-#endif
     }
     break;
   }

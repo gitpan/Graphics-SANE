@@ -15,30 +15,3 @@ WriteMakefile(
     # OBJECT            => '$(O_FILES)', # link all the C files too
     TYPEMAPS          => ['typemap'],
 );
-if  (eval {require ExtUtils::Constant; 1}) {
-  # If you edit these definitions to change the constants used by this module,
-  # you will need to use the generated const-c.inc and const-xs.inc
-  # files to replace their "fallback" counterparts before distributing your
-  # changes.
-  my @names = (qw(SANE_STATUS_ACCESS_DENIED SANE_STATUS_CANCELLED
-		  SANE_STATUS_COVER_OPEN SANE_STATUS_DEVICE_BUSY
-		  SANE_STATUS_EOF SANE_STATUS_GOOD SANE_STATUS_INVAL
-		  SANE_STATUS_IO_ERROR SANE_STATUS_JAMMED SANE_STATUS_NO_DOCS
-		  SANE_STATUS_NO_MEM SANE_STATUS_UNSUPPORTED));
-  ExtUtils::Constant::WriteConstants(
-                                     NAME         => 'Graphics::SANE',
-                                     NAMES        => \@names,
-                                     DEFAULT_TYPE => 'IV',
-                                     C_FILE       => 'const-c.inc',
-                                     XS_FILE      => 'const-xs.inc',
-                                  );
-
-}
-else {
-  use File::Copy;
-  use File::Spec;
-  foreach my $file ('const-c.inc', 'const-xs.inc') {
-    my $fallback = File::Spec->catfile('fallback', $file);
-    copy ($fallback, $file) or die "Can't copy $fallback to $file: $!";
-  }
-}

@@ -9,7 +9,20 @@
 #include "const-c.inc"
 
 typedef SANE_Handle Graphics_SANE_Handle;
-#define KEY(s) s,sizeof(s)-1
+
+SV **hash_store(HV* hash, const char *key, SV *val)
+{
+    return hv_store(hash, key, strlen(key), val, 0);
+}
+
+void set_error(int sts)
+{
+    SV *err;
+    err = perl_get_sv("Graphics::SANE::err", 1);
+    sv_setiv(err, sts);
+    err = perl_get_sv("Graphics::SANE::errstr", 1);
+    sv_setpv(err, sane_strstatus(sts));
+}
 
 MODULE = Graphics::SANE		PACKAGE = Graphics::SANE		
 
@@ -43,14 +56,14 @@ init()
     HV *hv = newHV();
     sts = sane_init(&vers, NULL);
     if (sts)
-        RETVAL = newSViv(sts);
-    else
     {
-	hv_store(hv, KEY("major"), newSViv(SANE_VERSION_MAJOR(vers)), 0);
-	hv_store(hv, KEY("minor"), newSViv(SANE_VERSION_MINOR(vers)), 0);
-	hv_store(hv, KEY("build"), newSViv(SANE_VERSION_BUILD(vers)), 0);
-	RETVAL = newRV_noinc((SV *) hv);
+	set_error(sts);
+	XSRETURN_EMPTY;
     }
+    hash_store(hv, "major", newSViv(SANE_VERSION_MAJOR(vers)));
+    hash_store(hv, "minor", newSViv(SANE_VERSION_MINOR(vers)));
+    hash_store(hv, "build", newSViv(SANE_VERSION_BUILD(vers)));
+    RETVAL = newRV_noinc((SV *) hv);
   OUTPUT:
     RETVAL
 
@@ -66,13 +79,18 @@ get_devices()
     const SANE_Device **list,*dev;
     int cnt;
     sts = sane_get_devices(&list,0);
+    if (sts)
+    {
+	set_error(sts);
+	XSRETURN_EMPTY;
+    }
     for (cnt=0;dev=list[cnt];cnt++)
     {
 	HV *hv = newHV();
-	hv_store(hv, KEY("name"), newSVpv(dev->name, 0), 0);
-	hv_store(hv, KEY("vendor"), newSVpv(dev->vendor, 0), 0);
-	hv_store(hv, KEY("model"), newSVpv(dev->model, 0), 0);
-	hv_store(hv, KEY("type"), newSVpv(dev->type, 0), 0);
+	hash_store(hv, "name", newSVpv(dev->name, 0));
+	hash_store(hv, "vendor", newSVpv(dev->vendor, 0));
+	hash_store(hv, "model", newSVpv(dev->model, 0));
+	hash_store(hv, "type", newSVpv(dev->type, 0));
 	EXTEND(SP, 1);
 	PUSHs(newRV_noinc((SV *) hv));
     }
@@ -88,7 +106,7 @@ int sts
   OUTPUT:
     RETVAL
 
-SV *
+Graphics_SANE_Handle
 open(name)
 char *name
   CODE:
@@ -96,9 +114,11 @@ char *name
     SANE_Handle handle;
     sts = sane_open(name, &handle);
     if (sts != 0)
-	RETVAL = newSViv(sts);
-    else
-        sv_setref_pv(RETVAL, "Graphics::SANE::Handle", (void*)handle);
+    {
+	set_error(sts);
+	XSRETURN_EMPTY;
+    }
+    RETVAL = handle;
   OUTPUT:
     RETVAL
 
@@ -122,10 +142,10 @@ int idx
     HV *hv = newHV();
   CODE:
     opt = sane_get_option_descriptor(h, idx);
-    hv_store(hv, KEY("index"), newSViv(idx), 0);
-    hv_store(hv, KEY("name"), newSVpv((opt->name ? opt->name : ""), 0), 0);
-    hv_store(hv, KEY("title"), newSVpv(opt->title, 0), 0);
-    hv_store(hv, KEY("desc"), newSVpv(opt->desc, 0), 0);
+    hash_store(hv, "index", newSViv(idx));
+    hash_store(hv, "name", newSVpv((opt->name ? opt->name : ""), 0));
+    hash_store(hv, "title", newSVpv(opt->title, 0));
+    hash_store(hv, "desc", newSVpv(opt->desc, 0));
     switch (opt->unit) {
       case SANE_UNIT_NONE:
 	p = "none";
@@ -152,7 +172,7 @@ int idx
 	p = "unknown";
 	break;
     }
-    hv_store(hv, KEY("unit"), newSVpv(p, 0), 0);
+    hash_store(hv, "unit", newSVpv(p, 0));
     switch (opt->type) {
       case SANE_TYPE_BOOL:
 	p = "bool";
@@ -182,21 +202,17 @@ int idx
 	p = "unknown";
 	break;
     }
-    hv_store(hv, KEY("type"), newSVpv(p, 0), 0);
+    hash_store(hv, "type", newSVpv(p, 0));
     if (s)
-	hv_store(hv, KEY("size"), newSViv(*s), 0);
-    hv_store(hv, KEY("soft_select"),
-	     newSViv((opt->cap & SANE_CAP_SOFT_SELECT) != 0), 0);
-    hv_store(hv, KEY("hard_select"),
-	     newSViv((opt->cap & SANE_CAP_HARD_SELECT) != 0), 0);
-    hv_store(hv, KEY("emulated"),
-	     newSViv((opt->cap & SANE_CAP_EMULATED) != 0), 0);
-    hv_store(hv, KEY("automatic"),
-	     newSViv((opt->cap & SANE_CAP_AUTOMATIC) != 0), 0);
-    hv_store(hv, KEY("inactive"),
-	     newSViv((opt->cap & SANE_CAP_INACTIVE) != 0), 0);
-    hv_store(hv, KEY("advanced"),
-	     newSViv((opt->cap & SANE_CAP_ADVANCED) != 0), 0);
+	hash_store(hv, "size", newSViv(*s));
+    hash_store(hv, "soft_select",
+	     newSViv((opt->cap & SANE_CAP_SOFT_SELECT) != 0));
+    hash_store(hv, "hard_select",
+	       newSViv((opt->cap & SANE_CAP_HARD_SELECT) != 0));
+    hash_store(hv, "emulated", newSViv((opt->cap & SANE_CAP_EMULATED) != 0));
+    hash_store(hv, "automatic", newSViv((opt->cap & SANE_CAP_AUTOMATIC) != 0));
+    hash_store(hv, "inactive", newSViv((opt->cap & SANE_CAP_INACTIVE) != 0));
+    hash_store(hv, "advanced", newSViv((opt->cap & SANE_CAP_ADVANCED) != 0));
     switch (opt->constraint_type) {
       case SANE_CONSTRAINT_NONE:
 	p = "none";
@@ -205,19 +221,16 @@ int idx
 	p = "range";
 	if (opt->type == SANE_TYPE_FIXED)
 	{
-	    hv_store(hv, KEY("min"),
-		     newSVnv(SANE_UNFIX(opt->constraint.range->min)), 0);
-	    hv_store(hv, KEY("max"),
-		     newSViv(SANE_UNFIX(opt->constraint.range->max)), 0);
-	    hv_store(hv, KEY("quant"),
-		     newSViv(SANE_UNFIX(opt->constraint.range->quant)), 0);
+	    hash_store(hv, "min",
+		     newSVnv(SANE_UNFIX(opt->constraint.range->min)));
+	    hash_store(hv, "max",
+		     newSViv(SANE_UNFIX(opt->constraint.range->max)));
+	    hash_store(hv, "quant",
+		     newSViv(SANE_UNFIX(opt->constraint.range->quant)));
 	} else {
-	    hv_store(hv, KEY("min"),
-		     newSViv(opt->constraint.range->min), 0);
-	    hv_store(hv, KEY("max"),
-		     newSViv(opt->constraint.range->max), 0);
-	    hv_store(hv, KEY("quant"),
-		     newSViv(opt->constraint.range->quant), 0);
+	    hash_store(hv, "min", newSViv(opt->constraint.range->min));
+	    hash_store(hv, "max", newSViv(opt->constraint.range->max));
+	    hash_store(hv, "quant", newSViv(opt->constraint.range->quant));
 	}
 	break;
       case SANE_CONSTRAINT_WORD_LIST:
@@ -234,7 +247,7 @@ int idx
 		else
 		    av_push(avl, newSViv(*pp++));
 	    }
-	    hv_store(hv, KEY("word_list"), newRV_noinc((SV *) avl), 0);
+	    hash_store(hv, "word_list", newRV_noinc((SV *) avl));
 	}
 	p = "word_list";
 	break;
@@ -245,7 +258,7 @@ int idx
 	    pp = opt->constraint.string_list;
 	    while (*pp)
 		av_push(avl, newSVpv(*pp++, 0));
-	    hv_store(hv, KEY("string_list"), newRV_noinc((SV *) avl), 0);
+	    hash_store(hv, "string_list", newRV_noinc((SV *) avl));
 	}
 	p = "string_list";
 	break;
@@ -253,7 +266,7 @@ int idx
 	p = "unknown";
 	break;
     }
-    hv_store(hv, KEY("constraint"), newSVpv(p, 0), 0);
+    hash_store(hv, "constraint", newSVpv(p, 0));
     RETVAL = newRV_noinc((SV *) hv);
   OUTPUT:
     RETVAL
@@ -334,15 +347,18 @@ SV *v
 	break;
     }
     if (sts != 0)
-	RETVAL = newSViv(sts);
+    {
+	set_error(sts);
+	XSRETURN_EMPTY;
+    }
     else
     {
 	HV *hv = newHV();
-	hv_store(hv, KEY("INEXACT"), newSViv((i & SANE_INFO_INEXACT) != 0), 0);
-	hv_store(hv, KEY("RELOAD_OPTIONS"),
-		 newSViv((i & SANE_INFO_RELOAD_OPTIONS) != 0), 0);
-	hv_store(hv, KEY("RELOAD_PARAMS"),
-		 newSViv((i & SANE_INFO_RELOAD_PARAMS) != 0), 0);
+	hash_store(hv, "INEXACT", newSViv((i & SANE_INFO_INEXACT) != 0));
+	hash_store(hv, "RELOAD_OPTIONS",
+		 newSViv((i & SANE_INFO_RELOAD_OPTIONS) != 0));
+	hash_store(hv, "RELOAD_PARAMS",
+		 newSViv((i & SANE_INFO_RELOAD_PARAMS) != 0));
 	RETVAL = newRV_noinc((SV *) hv);
     }
   OUTPUT:
@@ -359,65 +375,82 @@ Graphics_SANE_Handle h
   CODE:
     sts = sane_get_parameters(h, &p);
     if (sts)
-        RETVAL = newSViv(sts);
-    else
     {
-	switch (p.format) {
-	  case SANE_FRAME_GRAY:
-	    s = "gray";
-	    break;
-	  case SANE_FRAME_RGB:
-	    s = "rgb";
-	    break;
-	  case SANE_FRAME_RED:
-	    s = "red";
-	    break;
-	  case SANE_FRAME_GREEN:
-	    s = "green";
-	    break;
-	  case SANE_FRAME_BLUE:
-	    s = "blue";
-	    break;
-	  default:
-	    s = "unknown";
-	    break;
-	}
-	hv_store(hv, KEY("format"), newSVpv(s, 0), 0);
-	hv_store(hv, KEY("last_frame"), newSViv(p.last_frame), 0);
-	hv_store(hv, KEY("lines"), newSViv(p.lines), 0);
-	hv_store(hv, KEY("depth"), newSViv(p.depth), 0);
-	hv_store(hv, KEY("pixels_per_line"), newSViv(p.pixels_per_line), 0);
-	hv_store(hv, KEY("bytes_per_line"), newSViv(p.bytes_per_line), 0);
-	RETVAL = newRV_noinc((SV *) hv);
+	set_error(sts);
+	XSRETURN_EMPTY;
     }
+    switch (p.format) {
+      case SANE_FRAME_GRAY:
+	s = "gray";
+	break;
+      case SANE_FRAME_RGB:
+	s = "rgb";
+	break;
+      case SANE_FRAME_RED:
+	s = "red";
+	break;
+      case SANE_FRAME_GREEN:
+	s = "green";
+	break;
+      case SANE_FRAME_BLUE:
+	s = "blue";
+	break;
+      default:
+	s = "unknown";
+	break;
+     }
+    hash_store(hv, "format", newSVpv(s, 0));
+    hash_store(hv, "last_frame", newSViv(p.last_frame));
+    hash_store(hv, "lines", newSViv(p.lines));
+    hash_store(hv, "depth", newSViv(p.depth));
+    hash_store(hv, "pixels_per_line", newSViv(p.pixels_per_line));
+    hash_store(hv, "bytes_per_line", newSViv(p.bytes_per_line));
+    RETVAL = newRV_noinc((SV *) hv);
   OUTPUT:
     RETVAL
 
-int
+SV *
 start(h)
 Graphics_SANE_Handle h
+  PREINIT:
+    int sts;
   CODE:
-    RETVAL = sane_start(h);
+    sts = sane_start(h);
+    if (sts)
+    {
+	set_error(sts);
+	XSRETURN_EMPTY;
+    }
+    RETVAL = newSVpv("0e0", 3);
   OUTPUT:
     RETVAL
 
-int
-read(h, b, l)
+SV *
+read(h, l)
 Graphics_SANE_Handle h
-SV *b
 int l
   PREINIT:
-    char *buf;
     int len;
+    int sts;
+    char *buf;
   CODE:
-    if (!SvOK(b) || !SvPOK(b))
-        sv_setpv(b,"");
-    buf = SvGROW(b, l);
-    RETVAL = sane_read(h, buf, l, &len);
-    SvCUR_set(b, len);
+    buf = malloc(l);
+    if (buf == NULL)
+    {
+	SET_ERROR(errno,errno);
+	XSRETURN_EMPTY;
+    }
+    sts = sane_read(h, buf, l, &len);
+    if (sts)
+    {
+	set_error(sts);
+	free(buf);
+	XSRETURN_EMPTY;
+    }
+    RETVAL = newSVpv(buf, len);
+    free(buf);
   OUTPUT:
     RETVAL
-    b
 
 void
 cancel(h)

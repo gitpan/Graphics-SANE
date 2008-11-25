@@ -35,7 +35,7 @@ our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
 our @EXPORT = ();
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 sub AUTOLOAD {
     # This AUTOLOAD is used to 'autoload' constants from the constant()
@@ -84,9 +84,6 @@ Graphics::SANE - Perl extension for the Sane scanner access library.
   # get a list of devices
   @devices = Graphics::SANE::device_list;
 
-  # translate an error status to a string
-  $error_string = Graphics::SANE::strstatus($status_code);
-
   # open a scanner
   $handle = Graphics::SANE::open($scanner_name);
 
@@ -108,9 +105,11 @@ Graphics::SANE - Perl extension for the Sane scanner access library.
 
   # read data and write to a file
   open $fh,">","filename";
-  while (($status = $handle->read($b,$p->{bytes_per_line})) == 0) {
+  while ($b = $handle->read($p->{bytes_per_line})) {
      print $fh $b;
   }
+  print $Graphics::SANE::errstr
+      unless $Graphics::SANE::err == Graphics::SANE::SANE_STATUS_EOF;
   close $fh;
 
   # finish reading data
@@ -163,11 +162,7 @@ Returns a list of hashrefs describing available scanner devices.  Each
 hashref contains the attributes "name", "vendor", "model" and "type".
 The "name" attribute can be passed to C<open> to access the device.
 
-=head2 strstatus
-
-Accepts a Sane status code and returns a string describing the error.
-
-=head2 open
+=head2 open("name")
 
 Accepts a device name and returns a handle.  The handle is an object
 blessed into the Graphics::SANE::Handle package.
@@ -176,7 +171,7 @@ blessed into the Graphics::SANE::Handle package.
 
 These methods are valid for Graphics::SANE::Handle objects.
 
-=head2 get_option_description
+=head2 get_option_description(index)
 
 Accepts an option index and returns a descriptor for the option.  The
 descriptor is a hashref containing the following attributes.
@@ -273,29 +268,29 @@ appears if the constraint is "string_list".
 
 =back
 
-=item get_option_value
+=item get_option_value(index)
 
 Accepts an index and returns the value for the option with that index.
 
-=item set_option_value
+=item set_option_value(index,value)
 
 Accepts an index and a value.  Sets the value of the option with that
-index.  If an error occurs, the status code will be returned as a
-scalar.  Otherwise, the returned value will be a hashref containing
-three booleans.  If "INEXACT" is true, it means the backend could not
-use the supplied value exactly and an approximate value was used.  If
+index.  The returned value will be a hashref containing three
+booleans.  If "INEXACT" is true, it means the backend could not use
+the supplied value exactly and an approximate value was used.  If
 "RELOAD_OPTIONS" is true, some other options may have changed their
 active states and should be requeried.  If "RELOAD_PARAMS" is true,
 the values that would be returned by C<get_params> may have changed.
 
 =item start
 
-Begins the scan operation.  Returns a status code.
+Begins the scan operation.
 
 =item get_parameters
 
-Returns information about the graphics image that would be returned by
-the backend in a hashref that contains the following values.
+Returns a hashref containing information about the graphics image that
+would be returned by the backend.  The hash contains the following
+values:
 
 =over 4
 
@@ -327,11 +322,10 @@ Returns the number of bytes in a line of image data.
 
 =back
 
-=item read
+=item read(int)
 
-Accepts a scalar and a length.  This method reads up to the requested
-length in bytes from the device and places the result in the scalar.
-Returns a status code.
+Accepts the number of bytes to read.  Reads up to the requested length
+in bytes from the device and returns the data read.
 
 =item cancel
 
@@ -341,6 +335,15 @@ the device.
 =item close
 
 Closes the device.
+
+=head1 ERRORS
+
+All of the routines check the status returned by the Sane library
+routine.  If the call is successful, the routine will return the
+information described above or a true value.  If an error occurs, the
+routine will store the status code in the package variable
+C<$Graphics::SANE::err> and will store the string translation of the
+code in C<$Graphics::SANE::errstr>.
 
 =head1 SEE ALSO
 

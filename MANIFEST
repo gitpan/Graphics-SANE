@@ -5,8 +5,9 @@ ppport.h
 README
 SANE.xs
 typemap
-t/Sane.t
-fallback/const-c.inc
-fallback/const-xs.inc
+const-c.inc
+const-xs.inc
 lib/Graphics/SANE.pm
+t/Sane.t
+examples/photocopy.pl
 META.yml                                 Module meta-data (added by MakeMaker)
